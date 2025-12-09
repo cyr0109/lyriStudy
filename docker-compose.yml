@@ -1,0 +1,23 @@
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app  # Sync code for hot reload
+      - ./database.db:/app/database.db # Persist database
+      - .env:/app/.env # Load env vars
+    environment:
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - VITE_API_URL=http://localhost:8000
+    depends_on:
+      - backend
