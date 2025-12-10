@@ -48,10 +48,11 @@ app.add_middleware(
 )
 
 # --- Authentication Setup ---
-ADMIN_USER = "cyr"
-ADMIN_PASS = "20040109"
-# Simple static token for this use case
-STATIC_TOKEN = "secret-token-cyr-20040109"
+# Use environment variables for sensitive data
+ADMIN_USER = os.getenv("ADMIN_USER", "admin")
+ADMIN_PASS = os.getenv("ADMIN_PASS", "password")
+# Token should ideally be generated, but reading from env is better than hardcoding
+STATIC_TOKEN = os.getenv("AUTH_TOKEN", "secret-token-changeme")
 
 class LoginRequest(BaseModel):
     username: str
@@ -62,6 +63,7 @@ class LoginResponse(BaseModel):
 
 @app.post("/api/login", response_model=LoginResponse)
 def login(creds: LoginRequest):
+    # Simple check against env vars
     if creds.username == ADMIN_USER and creds.password == ADMIN_PASS:
         return {"token": STATIC_TOKEN}
     raise HTTPException(status_code=401, detail="Invalid credentials")

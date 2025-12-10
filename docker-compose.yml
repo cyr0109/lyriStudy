@@ -10,6 +10,9 @@ services:
     environment:
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
       - SQLITE_DB_PATH=/data/database.db
+      - ADMIN_USER=${ADMIN_USER}
+      - ADMIN_PASS=${ADMIN_PASS}
+      - AUTH_TOKEN=${AUTH_TOKEN}
 
   frontend:
     build: ./frontend
