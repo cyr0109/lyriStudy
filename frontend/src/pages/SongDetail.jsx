@@ -5,7 +5,6 @@ import { ArrowLeft, Loader2 } from 'lucide-react'
 import { Button } from '../components/ui/button'
 import { AnalysisResult } from '../components/AnalysisResult'
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
 
 export function SongDetail() {
   const { id } = useParams()
@@ -16,7 +15,7 @@ export function SongDetail() {
   useEffect(() => {
     const fetchSong = async () => {
       try {
-        const response = await axios.get(`${API_BASE_URL}/api/song/${id}`)
+        const response = await axios.get(`/api/song/${id}`)
         setSong(response.data)
       } catch (err) {
         console.error(err)

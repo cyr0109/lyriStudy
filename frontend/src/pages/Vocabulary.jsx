@@ -6,7 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Button } from '../components/ui/button';
 import { cn } from '../lib/utils';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
 
 // Helper function to categorize part of speech
 const mapPartOfSpeech = (pos) => {
@@ -30,7 +29,7 @@ export function Vocabulary() {
 
   const fetchSavedVocab = async () => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/api/vocab/saved`);
+      const response = await axios.get(`/api/vocab/saved`);
       setSavedVocab(response.data);
     } catch (err) {
       console.error(err);
@@ -42,7 +41,7 @@ export function Vocabulary() {
 
   const handleToggleSave = async (vocabId) => {
     try {
-      const response = await axios.post(`${API_BASE_URL}/api/vocab/toggle_save/${vocabId}`);
+      const response = await axios.post(`/api/vocab/toggle_save/${vocabId}`);
       // Filter out the unsaved vocab card locally
       setSavedVocab((prevVocab) => prevVocab.filter(card => card.id !== vocabId));
     } catch (err) {

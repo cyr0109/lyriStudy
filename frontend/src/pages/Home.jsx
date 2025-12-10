@@ -7,7 +7,6 @@ import { Input } from '../components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { AnalysisResult } from '../components/AnalysisResult'
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
 
 export function Home() {
   const [lyrics, setLyrics] = useState('')
@@ -41,7 +40,7 @@ export function Home() {
     setResult(null)
 
     try {
-      const response = await axios.post(`${API_BASE_URL}/api/analyze`, {
+      const response = await axios.post(`/api/analyze`, {
         lyrics,
         language,
         title,

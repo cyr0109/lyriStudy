@@ -5,7 +5,7 @@ import { Trash2, Calendar, Music, User, ArrowRight } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Button } from '../components/ui/button'
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
+
 
 export function History() {
   const [songs, setSongs] = useState([])
@@ -18,7 +18,7 @@ export function History() {
 
   const fetchHistory = async () => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/api/history`)
+      const response = await axios.get(`/api/history`)
       setSongs(response.data)
     } catch (err) {
       console.error(err)
@@ -34,7 +34,7 @@ export function History() {
     if (!window.confirm("Are you sure you want to delete this song?")) return;
 
     try {
-      await axios.delete(`${API_BASE_URL}/api/song/${id}`)
+      await axios.delete(`/api/song/${id}`)
       // Update list locally
       setSongs(songs.filter(song => song.id !== id))
     } catch (err) {
