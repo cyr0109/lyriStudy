@@ -5,10 +5,11 @@ services:
       - "8000:8000"
     volumes:
       - ./backend:/app  # Sync code for hot reload
-      - ./database.db:/app/database.db # Persist database
+      - sqlite_data:/data # Persist database in a named volume mounted at /data
       - .env:/app/.env # Load env vars
     environment:
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - SQLITE_DB_PATH=/data/database.db
 
   frontend:
     build: ./frontend
@@ -19,3 +20,6 @@ services:
       - /app/node_modules
     depends_on:
       - backend
+      
+volumes:
+  sqlite_data:

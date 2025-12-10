@@ -13,8 +13,10 @@ from models import Song, LyricsLine, VocabCard
 # Make sure to import `analyze_lyrics_with_gemini`
 from gemini_service import analyze_lyrics_with_gemini
 
+import os
+
 # Database Setup
-sqlite_file_name = "database.db"
+sqlite_file_name = os.getenv("SQLITE_DB_PATH", "database.db")
 sqlite_url = f"sqlite:///{sqlite_file_name}"
 engine = create_engine(sqlite_url, connect_args={"check_same_thread": False})
 
