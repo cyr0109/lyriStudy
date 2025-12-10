@@ -1,35 +1,67 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import axios from 'axios'
-import { Loader2, Music, BookOpen, Globe, PenTool, User } from 'lucide-react'
-import { Button } from './components/ui/button'
-import { Textarea } from './components/ui/textarea'
-import { Input } from './components/ui/input'
-import { Card, CardContent, CardHeader, CardTitle } from './components/ui/card'
-import { cn } from './lib/utils'
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { Navbar } from './components/Navbar'
 import { Home } from './pages/Home'
 import { History } from './pages/History'
 import { SongDetail } from './pages/SongDetail'
 import { Vocabulary } from './pages/Vocabulary'
+import { Login } from './pages/Login'
 import { Toaster } from './components/ui/sonner'
 
-// API Base URL from environment variable or default
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
+// Setup axios default if token exists on load
+const token = localStorage.getItem('auth_token');
+if (token) {
+  axios.defaults.headers.common['x-auth-token'] = token;
+}
+
+// Private Route Component
+const PrivateRoute = ({ children }) => {
+  const token = localStorage.getItem('auth_token');
+  const location = useLocation();
+
+  if (!token) {
+    // Redirect to login page but save the location they were trying to access
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  return children;
+};
 
 function App() {
   return (
     <Router>
       <div className="min-h-screen bg-background text-foreground font-sans flex flex-col">
-        <Navbar />
-        <main className="flex-1 p-4 sm:p-8">
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/history" element={<History />} />
-            <Route path="/song/:id" element={<SongDetail />} />
-            <Route path="/vocabulary" element={<Vocabulary />} />
-          </Routes>
-        </main>
+        {/* Only show Navbar if authenticated (optional, but keeps login clean) */}
+        {/* Or we can just show it always. Let's make Navbar somewhat conditional or just let it be. 
+            For simplicity, we wrap Navbar inside the protected layout or just let it render. 
+            Let's keep it simple: Navbar is always there, but links might not work if backend rejects them.
+            Actually, let's wrap the protected pages in a layout that has the Navbar.
+        */}
+        
+        <Routes>
+          <Route path="/login" element={
+            <div className="flex-1 p-4 sm:p-8">
+               <Login />
+            </div>
+          } />
+          
+          <Route path="/*" element={
+            <PrivateRoute>
+              <>
+                <Navbar />
+                <main className="flex-1 p-4 sm:p-8">
+                  <Routes>
+                    <Route path="/" element={<Home />} />
+                    <Route path="/history" element={<History />} />
+                    <Route path="/song/:id" element={<SongDetail />} />
+                    <Route path="/vocabulary" element={<Vocabulary />} />
+                  </Routes>
+                </main>
+              </>
+            </PrivateRoute>
+          } />
+        </Routes>
         <Toaster />
       </div>
     </Router>

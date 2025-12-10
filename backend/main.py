@@ -1,10 +1,11 @@
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, Header
 from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import SQLModel, Session, select, create_engine
 from typing import List, Optional
 from contextlib import asynccontextmanager
 from datetime import datetime
 from pydantic import BaseModel
+import os
 
 # Import relative to the package if running as a module, but for simplicity assuming execution from root
 # We will use relative imports assuming `uvicorn backend.main:app`
@@ -12,8 +13,6 @@ from models import Song, LyricsLine, VocabCard
 
 # Make sure to import `analyze_lyrics_with_gemini`
 from gemini_service import analyze_lyrics_with_gemini
-
-import os
 
 # Database Setup
 sqlite_file_name = os.getenv("SQLITE_DB_PATH", "database.db")
@@ -47,6 +46,32 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# --- Authentication Setup ---
+ADMIN_USER = "cyr"
+ADMIN_PASS = "20040109"
+# Simple static token for this use case
+STATIC_TOKEN = "secret-token-cyr-20040109"
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+class LoginResponse(BaseModel):
+    token: str
+
+@app.post("/api/login", response_model=LoginResponse)
+def login(creds: LoginRequest):
+    if creds.username == ADMIN_USER and creds.password == ADMIN_PASS:
+        return {"token": STATIC_TOKEN}
+    raise HTTPException(status_code=401, detail="Invalid credentials")
+
+def verify_token(x_auth_token: str = Header(...)):
+    if x_auth_token != STATIC_TOKEN:
+        raise HTTPException(status_code=401, detail="Invalid or missing token")
+    return x_auth_token
+# ---------------------------
+
 
 # Request Models
 class AnalyzeRequest(BaseModel):
@@ -98,8 +123,10 @@ class SavedVocabRead(SQLModel):
     song_title: str
     song_artist: str
 
+# Protected Endpoints (Added `token: str = Depends(verify_token)`)
+
 @app.post("/api/analyze", response_model=SongRead)
-def analyze_lyrics(request: AnalyzeRequest, session: Session = Depends(get_session)):
+def analyze_lyrics(request: AnalyzeRequest, session: Session = Depends(get_session), token: str = Depends(verify_token)):
     """
     Analyzes lyrics using Google Gemini, saves to DB, and returns the result.
     """
@@ -154,23 +181,18 @@ def analyze_lyrics(request: AnalyzeRequest, session: Session = Depends(get_sessi
     session.commit()
     session.refresh(song)
     
-    # Ensure relationships are loaded for the response model
-    # Accessing them here triggers the load if they are lazy
-    # (Though FastAPI's response serialization would also trigger it)
     return song
 
 @app.get("/api/history", response_model=List[Song])
-def get_history(session: Session = Depends(get_session)):
+def get_history(session: Session = Depends(get_session), token: str = Depends(verify_token)):
     """
     Returns a list of previously analyzed songs (summary only).
     """
-    # We return the Song model which doesn't include the relationships by default, 
-    # fitting for a list view.
     songs = session.exec(select(Song).order_by(Song.created_at.desc())).all()
     return songs
 
 @app.get("/api/song/{song_id}", response_model=SongRead)
-def get_song(song_id: int, session: Session = Depends(get_session)):
+def get_song(song_id: int, session: Session = Depends(get_session), token: str = Depends(verify_token)):
     """
     Returns full details of a specific song.
     """
@@ -180,7 +202,7 @@ def get_song(song_id: int, session: Session = Depends(get_session)):
     return song
 
 @app.delete("/api/song/{song_id}")
-def delete_song(song_id: int, session: Session = Depends(get_session)):
+def delete_song(song_id: int, session: Session = Depends(get_session), token: str = Depends(verify_token)):
     """
     Deletes a song and its associated data.
     """
@@ -193,7 +215,7 @@ def delete_song(song_id: int, session: Session = Depends(get_session)):
     return {"ok": True}
 
 @app.post("/api/vocab/toggle_save/{vocab_id}", response_model=VocabCardRead)
-def toggle_save_vocab(vocab_id: int, session: Session = Depends(get_session)):
+def toggle_save_vocab(vocab_id: int, session: Session = Depends(get_session), token: str = Depends(verify_token)):
     """
     Toggles the `is_saved` status of a vocabulary card.
     """
@@ -208,7 +230,7 @@ def toggle_save_vocab(vocab_id: int, session: Session = Depends(get_session)):
     return vocab_card
 
 @app.get("/api/vocab/saved", response_model=List[SavedVocabRead])
-def get_saved_vocab(session: Session = Depends(get_session)):
+def get_saved_vocab(session: Session = Depends(get_session), token: str = Depends(verify_token)):
     """
     Returns a list of all saved vocabulary cards with their associated song details.
     """
