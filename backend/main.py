@@ -8,10 +8,10 @@ from pydantic import BaseModel
 
 # Import relative to the package if running as a module, but for simplicity assuming execution from root
 # We will use relative imports assuming `uvicorn backend.main:app`
-from .models import Song, LyricsLine, VocabCard
+from models import Song, LyricsLine, VocabCard
 
 # Make sure to import `analyze_lyrics_with_gemini`
-from .gemini_service import analyze_lyrics_with_gemini
+from gemini_service import analyze_lyrics_with_gemini
 
 # Database Setup
 sqlite_file_name = "database.db"
