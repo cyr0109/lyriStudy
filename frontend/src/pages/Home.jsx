@@ -36,7 +36,7 @@ export function Home() {
   }, [loading]);
 
   const handleAnalyze = async () => {
-    if (!lyrics.trim() || isOverLimit || !language) return
+    if (!lyrics.trim() || isOverLimit) return
 
     setLoading(true)
     setError(null)
