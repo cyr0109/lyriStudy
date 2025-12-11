@@ -10,7 +10,7 @@ import { AnalysisResult } from '../components/AnalysisResult'
 
 export function Home() {
   const [lyrics, setLyrics] = useState('')
-  const [language, setLanguage] = useState('ja')
+  const [language, setLanguage] = useState('')
   const [title, setTitle] = useState('')
   const [artist, setArtist] = useState('')
   const [loading, setLoading] = useState(false)
@@ -36,7 +36,7 @@ export function Home() {
   }, [loading]);
 
   const handleAnalyze = async () => {
-    if (!lyrics.trim() || isOverLimit) return
+    if (!lyrics.trim() || isOverLimit || !language) return
 
     setLoading(true)
     setError(null)
@@ -133,6 +133,7 @@ export function Home() {
                   onChange={(e) => setLanguage(e.target.value)}
                   disabled={loading}
                 >
+                  <option value="">Auto (Detect)</option>
                   <option value="ja">Japanese (日本語)</option>
                   <option value="en">English</option>
                   <option value="ko">Korean (한국어)</option>
