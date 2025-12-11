@@ -7,6 +7,7 @@ import { History } from './pages/History'
 import { SongDetail } from './pages/SongDetail'
 import { Vocabulary } from './pages/Vocabulary'
 import { Login } from './pages/Login'
+import { Register } from './pages/Register'
 import { Toaster } from './components/ui/sonner'
 
 // Setup axios default if token exists on load
@@ -43,6 +44,12 @@ function App() {
           <Route path="/login" element={
             <div className="flex-1 p-4 sm:p-8">
                <Login />
+            </div>
+          } />
+          
+          <Route path="/register" element={
+            <div className="flex-1 p-4 sm:p-8">
+               <Register />
             </div>
           } />
           

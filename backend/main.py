@@ -1,18 +1,21 @@
-from fastapi import FastAPI, Depends, HTTPException, Header
+from fastapi import FastAPI, Depends, HTTPException, Header, status
 from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import SQLModel, Session, select, create_engine
 from typing import List, Optional
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import datetime, timedelta
 from pydantic import BaseModel
 import os
 
 # Import relative to the package if running as a module, but for simplicity assuming execution from root
 # We will use relative imports assuming `uvicorn backend.main:app`
-from models import Song, LyricsLine, VocabCard
+from models import Song, LyricsLine, VocabCard, User
 
 # Make sure to import `analyze_lyrics_with_gemini`
 from gemini_service import analyze_lyrics_with_gemini
+
+# Import Auth functions
+from auth import verify_password, get_password_hash, create_access_token, decode_access_token, ACCESS_TOKEN_EXPIRE_MINUTES
 
 # Database Setup
 sqlite_file_name = os.getenv("SQLITE_DB_PATH", "database.db")
@@ -47,31 +50,77 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# --- Authentication Setup ---
-# Use environment variables for sensitive data
-ADMIN_USER = os.getenv("ADMIN_USER", "admin")
-ADMIN_PASS = os.getenv("ADMIN_PASS", "password")
-# Token should ideally be generated, but reading from env is better than hardcoding
-STATIC_TOKEN = os.getenv("AUTH_TOKEN", "secret-token-changeme")
+# --- Authentication Models & Logic ---
 
-class LoginRequest(BaseModel):
+class AuthRequest(BaseModel):
     username: str
     password: str
 
-class LoginResponse(BaseModel):
+class TokenResponse(BaseModel):
     token: str
+    username: str
 
-@app.post("/api/login", response_model=LoginResponse)
-def login(creds: LoginRequest):
-    # Simple check against env vars
-    if creds.username == ADMIN_USER and creds.password == ADMIN_PASS:
-        return {"token": STATIC_TOKEN}
-    raise HTTPException(status_code=401, detail="Invalid credentials")
+# Dependency to verify token and get current user
+def get_current_user(x_auth_token: str = Header(..., alias="x-auth-token"), session: Session = Depends(get_session)):
+    payload = decode_access_token(x_auth_token)
+    if payload is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired token",
+        )
+    username: str = payload.get("sub")
+    if username is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token payload",
+        )
+    
+    # Optional: Verify user still exists in DB
+    user = session.exec(select(User).where(User.username == username)).first()
+    if user is None:
+        raise HTTPException(status_code=401, detail="User not found")
+        
+    return user
 
-def verify_token(x_auth_token: str = Header(...)):
-    if x_auth_token != STATIC_TOKEN:
-        raise HTTPException(status_code=401, detail="Invalid or missing token")
-    return x_auth_token
+@app.post("/api/register", response_model=TokenResponse)
+def register(creds: AuthRequest, session: Session = Depends(get_session)):
+    # Check if user exists
+    user = session.exec(select(User).where(User.username == creds.username)).first()
+    if user:
+        raise HTTPException(status_code=400, detail="Username already registered")
+    
+    # Create new user
+    new_user = User(
+        username=creds.username,
+        password_hash=get_password_hash(creds.password)
+    )
+    session.add(new_user)
+    session.commit()
+    session.refresh(new_user)
+    
+    # Create Token
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": new_user.username}, expires_delta=access_token_expires
+    )
+    
+    return {"token": access_token, "username": new_user.username}
+
+@app.post("/api/login", response_model=TokenResponse)
+def login(creds: AuthRequest, session: Session = Depends(get_session)):
+    user = session.exec(select(User).where(User.username == creds.username)).first()
+    if not user or not verify_password(creds.password, user.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+        )
+    
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": user.username}, expires_delta=access_token_expires
+    )
+    return {"token": access_token, "username": user.username}
+
 # ---------------------------
 
 
@@ -125,10 +174,10 @@ class SavedVocabRead(SQLModel):
     song_title: str
     song_artist: str
 
-# Protected Endpoints (Added `token: str = Depends(verify_token)`)
+# Protected Endpoints (Added `user: User = Depends(get_current_user)`)
 
 @app.post("/api/analyze", response_model=SongRead)
-def analyze_lyrics(request: AnalyzeRequest, session: Session = Depends(get_session), token: str = Depends(verify_token)):
+def analyze_lyrics(request: AnalyzeRequest, session: Session = Depends(get_session), user: User = Depends(get_current_user)):
     """
     Analyzes lyrics using Google Gemini, saves to DB, and returns the result.
     """
@@ -186,7 +235,7 @@ def analyze_lyrics(request: AnalyzeRequest, session: Session = Depends(get_sessi
     return song
 
 @app.get("/api/history", response_model=List[Song])
-def get_history(session: Session = Depends(get_session), token: str = Depends(verify_token)):
+def get_history(session: Session = Depends(get_session), user: User = Depends(get_current_user)):
     """
     Returns a list of previously analyzed songs (summary only).
     """
@@ -194,7 +243,7 @@ def get_history(session: Session = Depends(get_session), token: str = Depends(ve
     return songs
 
 @app.get("/api/song/{song_id}", response_model=SongRead)
-def get_song(song_id: int, session: Session = Depends(get_session), token: str = Depends(verify_token)):
+def get_song(song_id: int, session: Session = Depends(get_session), user: User = Depends(get_current_user)):
     """
     Returns full details of a specific song.
     """
@@ -204,7 +253,7 @@ def get_song(song_id: int, session: Session = Depends(get_session), token: str =
     return song
 
 @app.delete("/api/song/{song_id}")
-def delete_song(song_id: int, session: Session = Depends(get_session), token: str = Depends(verify_token)):
+def delete_song(song_id: int, session: Session = Depends(get_session), user: User = Depends(get_current_user)):
     """
     Deletes a song and its associated data.
     """
@@ -217,7 +266,7 @@ def delete_song(song_id: int, session: Session = Depends(get_session), token: st
     return {"ok": True}
 
 @app.post("/api/vocab/toggle_save/{vocab_id}", response_model=VocabCardRead)
-def toggle_save_vocab(vocab_id: int, session: Session = Depends(get_session), token: str = Depends(verify_token)):
+def toggle_save_vocab(vocab_id: int, session: Session = Depends(get_session), user: User = Depends(get_current_user)):
     """
     Toggles the `is_saved` status of a vocabulary card.
     """
@@ -232,7 +281,7 @@ def toggle_save_vocab(vocab_id: int, session: Session = Depends(get_session), to
     return vocab_card
 
 @app.get("/api/vocab/saved", response_model=List[SavedVocabRead])
-def get_saved_vocab(session: Session = Depends(get_session), token: str = Depends(verify_token)):
+def get_saved_vocab(session: Session = Depends(get_session), user: User = Depends(get_current_user)):
     """
     Returns a list of all saved vocabulary cards with their associated song details.
     """

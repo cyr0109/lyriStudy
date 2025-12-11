@@ -4,3 +4,6 @@ sqlmodel
 google-generativeai
 python-multipart
 python-dotenv
+passlib
+argon2-cffi
+pyjwt
