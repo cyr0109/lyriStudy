@@ -106,7 +106,7 @@ export function Home() {
           </div>
 
           <div className="flex gap-4">
-            <div className="flex-1">
+            <div className="flex-1 space-y-1">
               <Textarea
                 placeholder="Paste your lyrics here..."
                 className="min-h-[200px] font-mono text-base"
@@ -114,6 +114,9 @@ export function Home() {
                 onChange={(e) => setLyrics(e.target.value)}
                 disabled={loading}
               />
+              <div className="text-xs text-muted-foreground text-right">
+                {lyrics.length} characters
+              </div>
             </div>
             <div className="w-48 space-y-4">
               <div className="space-y-2">

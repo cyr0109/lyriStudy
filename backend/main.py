@@ -213,11 +213,17 @@ def analyze_lyrics(request: AnalyzeRequest, session: Session = Depends(get_sessi
         # or running in a threadpool (FastAPI does this for def endpoints automatically).
         data = analyze_lyrics_with_gemini(request.lyrics, request.language)
     except Exception as e:
+        error_msg = str(e)
+        if "429" in error_msg or "quota" in error_msg.lower():
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="System is busy (AI Quota Exceeded). Please try again later."
+            )
         # Optional: Revert counter on failure if you only want to count successful attempts
         # user.daily_analysis_count -= 1
         # session.add(user)
         # session.commit()
-        raise HTTPException(status_code=500, detail=f"AI Processing failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"AI Processing failed: {error_msg}")
 
     # 3. Save to DB
     # Use provided title/artist if available, else use what AI found, else default
@@ -228,7 +234,8 @@ def analyze_lyrics(request: AnalyzeRequest, session: Session = Depends(get_sessi
         title=final_title,
         artist=final_artist,
         source_text=request.lyrics,
-        language=request.language
+        language=request.language,
+        user_id=user.id # Link song to current user
     )
     session.add(song)
     session.commit()
@@ -267,29 +274,36 @@ def analyze_lyrics(request: AnalyzeRequest, session: Session = Depends(get_sessi
 @app.get("/api/history", response_model=List[Song])
 def get_history(session: Session = Depends(get_session), user: User = Depends(get_current_user)):
     """
-    Returns a list of previously analyzed songs (summary only).
+    Returns a list of previously analyzed songs (summary only) for the current user.
     """
-    songs = session.exec(select(Song).order_by(Song.created_at.desc())).all()
+    songs = session.exec(select(Song).where(Song.user_id == user.id).order_by(Song.created_at.desc())).all()
     return songs
 
 @app.get("/api/song/{song_id}", response_model=SongRead)
 def get_song(song_id: int, session: Session = Depends(get_session), user: User = Depends(get_current_user)):
     """
-    Returns full details of a specific song.
+    Returns full details of a specific song if it belongs to the user.
     """
     song = session.get(Song, song_id)
     if not song:
         raise HTTPException(status_code=404, detail="Song not found")
+    
+    if song.user_id != user.id:
+        raise HTTPException(status_code=403, detail="Not authorized to access this song")
+        
     return song
 
 @app.delete("/api/song/{song_id}")
 def delete_song(song_id: int, session: Session = Depends(get_session), user: User = Depends(get_current_user)):
     """
-    Deletes a song and its associated data.
+    Deletes a song and its associated data if it belongs to the user.
     """
     song = session.get(Song, song_id)
     if not song:
         raise HTTPException(status_code=404, detail="Song not found")
+    
+    if song.user_id != user.id:
+        raise HTTPException(status_code=403, detail="Not authorized to delete this song")
     
     session.delete(song)
     session.commit()
@@ -304,6 +318,11 @@ def toggle_save_vocab(vocab_id: int, session: Session = Depends(get_session), us
     if not vocab_card:
         raise HTTPException(status_code=404, detail="VocabCard not found")
     
+    # Verify ownership through song relationship
+    song = session.get(Song, vocab_card.song_id)
+    if not song or song.user_id != user.id:
+        raise HTTPException(status_code=403, detail="Not authorized to modify this vocabulary")
+    
     vocab_card.is_saved = not vocab_card.is_saved
     session.add(vocab_card)
     session.commit()
@@ -313,12 +332,13 @@ def toggle_save_vocab(vocab_id: int, session: Session = Depends(get_session), us
 @app.get("/api/vocab/saved", response_model=List[SavedVocabRead])
 def get_saved_vocab(session: Session = Depends(get_session), user: User = Depends(get_current_user)):
     """
-    Returns a list of all saved vocabulary cards with their associated song details.
+    Returns a list of all saved vocabulary cards for the current user.
     """
     saved_vocab = (
         session.query(VocabCard, Song)
         .join(Song, VocabCard.song_id == Song.id)
         .filter(VocabCard.is_saved == True)
+        .filter(Song.user_id == user.id) # Filter by current user
         .all()
     )
     

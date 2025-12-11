@@ -10,6 +10,9 @@ class User(SQLModel, table=True):
     # Rate Limiting
     daily_analysis_count: int = Field(default=0)
     last_analysis_date: Optional[datetime] = Field(default=None)
+    
+    # Relationships
+    songs: List["Song"] = Relationship(back_populates="user")
 
 class Song(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -18,6 +21,9 @@ class Song(SQLModel, table=True):
     source_text: str
     language: str  # 'ja', 'en', 'ko'
     created_at: datetime = Field(default_factory=datetime.utcnow)
+    
+    user_id: Optional[int] = Field(default=None, foreign_key="user.id")
+    user: Optional["User"] = Relationship(back_populates="songs")
     
     # Relationships
     lines: List["LyricsLine"] = Relationship(
