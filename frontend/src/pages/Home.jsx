@@ -19,6 +19,9 @@ export function Home() {
   const [elapsedTime, setElapsedTime] = useState(0)
   const timerRef = useRef(null)
 
+  const MAX_CHARS = 2000;
+  const isOverLimit = lyrics.length > MAX_CHARS;
+
   useEffect(() => {
     if (loading) {
       const startTime = Date.now();
@@ -33,7 +36,7 @@ export function Home() {
   }, [loading]);
 
   const handleAnalyze = async () => {
-    if (!lyrics.trim()) return
+    if (!lyrics.trim() || isOverLimit) return
 
     setLoading(true)
     setError(null)
@@ -114,8 +117,8 @@ export function Home() {
                 onChange={(e) => setLyrics(e.target.value)}
                 disabled={loading}
               />
-              <div className="text-xs text-muted-foreground text-right">
-                {lyrics.length} characters
+              <div className={`text-xs text-right ${isOverLimit ? 'text-destructive font-bold' : 'text-muted-foreground'}`}>
+                {lyrics.length} / {MAX_CHARS} characters
               </div>
             </div>
             <div className="w-48 space-y-4">
@@ -142,7 +145,7 @@ export function Home() {
               <Button 
                 className="w-full" 
                 onClick={handleAnalyze} 
-                disabled={loading || !lyrics.trim()}
+                disabled={loading || !lyrics.trim() || isOverLimit}
               >
                 {loading ? (
                   <>
