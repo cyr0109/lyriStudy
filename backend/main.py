@@ -217,7 +217,7 @@ def analyze_lyrics(request: AnalyzeRequest, session: Session = Depends(get_sessi
         if "429" in error_msg or "quota" in error_msg.lower():
             raise HTTPException(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                detail="System is busy (AI Quota Exceeded). Please try again later."
+                detail="AI Quota Exceeded (額度不足)"
             )
         # Optional: Revert counter on failure if you only want to count successful attempts
         # user.daily_analysis_count -= 1
