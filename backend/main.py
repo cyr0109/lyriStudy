@@ -176,20 +176,50 @@ class SavedVocabRead(SQLModel):
 
 # Protected Endpoints (Added `user: User = Depends(get_current_user)`)
 
+# --- Rate Limiting Logic ---
+DAILY_ANALYSIS_LIMIT = int(os.getenv("DAILY_ANALYSIS_LIMIT", 5))
+
 @app.post("/api/analyze", response_model=SongRead)
 def analyze_lyrics(request: AnalyzeRequest, session: Session = Depends(get_session), user: User = Depends(get_current_user)):
     """
     Analyzes lyrics using Google Gemini, saves to DB, and returns the result.
+    Enforces a daily limit of 5 requests per user.
     """
-    # 1. Call Gemini Service
+    
+    # 1. Rate Limiting Check
+    today = datetime.utcnow().date()
+    
+    if user.last_analysis_date is None or user.last_analysis_date.date() != today:
+        # Reset counter for a new day
+        user.daily_analysis_count = 0
+        user.last_analysis_date = datetime.utcnow()
+    
+    if user.daily_analysis_count >= DAILY_ANALYSIS_LIMIT:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=f"Daily analysis limit of {DAILY_ANALYSIS_LIMIT} reached. Please try again tomorrow."
+        )
+        
+    # Increment counter
+    user.daily_analysis_count += 1
+    user.last_analysis_date = datetime.utcnow() # Update timestamp to now
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+
+    # 2. Call Gemini Service
     try:
         # Note: This is a synchronous call. For high concurrency, consider making the service async 
         # or running in a threadpool (FastAPI does this for def endpoints automatically).
         data = analyze_lyrics_with_gemini(request.lyrics, request.language)
     except Exception as e:
+        # Optional: Revert counter on failure if you only want to count successful attempts
+        # user.daily_analysis_count -= 1
+        # session.add(user)
+        # session.commit()
         raise HTTPException(status_code=500, detail=f"AI Processing failed: {str(e)}")
 
-    # 2. Save to DB
+    # 3. Save to DB
     # Use provided title/artist if available, else use what AI found, else default
     final_title = request.title if request.title and request.title.strip() else data.get("title", "Unknown")
     final_artist = request.artist if request.artist and request.artist.strip() else data.get("artist", "Unknown")

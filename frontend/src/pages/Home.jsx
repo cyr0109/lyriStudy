@@ -49,7 +49,8 @@ export function Home() {
       setResult(response.data)
     } catch (err) {
       console.error(err)
-      setError("Failed to analyze lyrics. Please try again.")
+      const msg = err.response?.data?.detail || "Failed to analyze lyrics. Please try again.";
+      setError(msg)
     } finally {
       setLoading(false)
     }

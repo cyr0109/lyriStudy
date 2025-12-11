@@ -6,6 +6,10 @@ class User(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     username: str = Field(unique=True, index=True)
     password_hash: str
+    
+    # Rate Limiting
+    daily_analysis_count: int = Field(default=0)
+    last_analysis_date: Optional[datetime] = Field(default=None)
 
 class Song(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
