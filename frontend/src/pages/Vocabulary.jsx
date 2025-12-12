@@ -93,7 +93,12 @@ export function Vocabulary() {
                 <div className="flex justify-between items-start">
                   <div>
                     <CardTitle className="text-xl text-primary">{card.word}</CardTitle>
-                    <p className="text-sm text-muted-foreground">{card.reading}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground font-medium">
+                        {card.part_of_speech}
+                      </span>
+                      <p className="text-sm text-muted-foreground">{card.reading}</p>
+                    </div>
                   </div>
                   <Button 
                     variant="ghost" 
