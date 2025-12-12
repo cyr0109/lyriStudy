@@ -13,6 +13,10 @@ else
   echo "✅  DATABASE_URL is set. Using PostgreSQL."
 fi
 
+# Run simple migration
+echo "Running migrations..."
+python migrate.py
+
 # Start Uvicorn in foreground
 # Bind to localhost because Nginx will proxy to it locally
 echo "Starting Uvicorn..."
