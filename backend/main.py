@@ -67,6 +67,15 @@ class TokenResponse(BaseModel):
     token: str
     username: str
 
+class UserRead(BaseModel):
+    id: int
+    username: str
+    daily_analysis_count: int
+    avatar: Optional[str] = None
+
+class UserUpdate(BaseModel):
+    avatar: Optional[str] = None
+
 # Dependency to verify token and get current user
 def get_current_user(x_auth_token: str = Header(..., alias="x-auth-token"), session: Session = Depends(get_session)):
     payload = decode_access_token(x_auth_token)
@@ -127,6 +136,20 @@ def login(creds: AuthRequest, session: Session = Depends(get_session)):
         data={"sub": user.username}, expires_delta=access_token_expires
     )
     return {"token": access_token, "username": user.username}
+
+@app.get("/api/user/profile", response_model=UserRead)
+def get_user_profile(user: User = Depends(get_current_user)):
+    return user
+
+@app.put("/api/user/profile", response_model=UserRead)
+def update_user_profile(user_update: UserUpdate, session: Session = Depends(get_session), user: User = Depends(get_current_user)):
+    if user_update.avatar is not None:
+        user.avatar = user_update.avatar
+    
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+    return user
 
 # ---------------------------
 

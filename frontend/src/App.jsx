@@ -8,6 +8,7 @@ import { SongDetail } from './pages/SongDetail'
 import { Vocabulary } from './pages/Vocabulary'
 import { Login } from './pages/Login'
 import { Register } from './pages/Register'
+import { Profile } from './pages/Profile'
 import { Toaster } from './components/ui/sonner'
 
 // Setup axios default if token exists on load
@@ -69,6 +70,7 @@ function App() {
                       <Route path="/history" element={<History />} />
                       <Route path="/song/:id" element={<SongDetail />} />
                       <Route path="/vocabulary" element={<Vocabulary />} />
+                      <Route path="/profile" element={<Profile />} />
                     </Routes>
                   </main>
                 </>

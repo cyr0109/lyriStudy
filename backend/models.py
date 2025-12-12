@@ -11,6 +11,9 @@ class User(SQLModel, table=True):
     daily_analysis_count: int = Field(default=0)
     last_analysis_date: Optional[datetime] = Field(default=None)
     
+    # Profile
+    avatar: Optional[str] = Field(default=None) # Store avatar as Base64 string
+
     # Relationships
     songs: List["Song"] = Relationship(back_populates="user")
 
