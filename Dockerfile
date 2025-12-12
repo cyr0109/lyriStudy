@@ -33,6 +33,8 @@ COPY nginx.prod.conf /etc/nginx/conf.d/default.conf
 
 # Add entrypoint script
 COPY entrypoint.sh /entrypoint.sh
+# Install dos2unix and convert script to Unix format (LF)
+RUN apt-get update && apt-get install -y dos2unix && dos2unix /entrypoint.sh && rm -rf /var/lib/apt/lists/*
 RUN chmod +x /entrypoint.sh
 
 # Expose port 80 (Zeabur uses this)

@@ -1,7 +1,9 @@
 #!/bin/bash
 
-# Start Nginx in background
-# We assume nginx.conf doesn't have 'daemon off;'
+echo "Testing Nginx config..."
+nginx -t
+
+echo "Starting Nginx..."
 nginx
 
 # Start Uvicorn in foreground
