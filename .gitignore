@@ -3,6 +3,7 @@
 .env
 .vscode/
 .idea/
+nginx.conf
 
 # Python / Backend
 __pycache__/
