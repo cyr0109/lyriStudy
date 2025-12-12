@@ -7,3 +7,4 @@ python-dotenv
 passlib
 argon2-cffi
 pyjwt
+psycopg2-binary

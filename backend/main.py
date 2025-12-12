@@ -18,9 +18,16 @@ from gemini_service import analyze_lyrics_with_gemini
 from auth import verify_password, get_password_hash, create_access_token, decode_access_token, ACCESS_TOKEN_EXPIRE_MINUTES
 
 # Database Setup
-sqlite_file_name = os.getenv("SQLITE_DB_PATH", "database.db")
-sqlite_url = f"sqlite:///{sqlite_file_name}"
-engine = create_engine(sqlite_url, connect_args={"check_same_thread": False})
+DATABASE_URL = os.getenv("DATABASE_URL")
+if not DATABASE_URL:
+    # Fallback to SQLite for local dev if not provided
+    sqlite_file_name = os.getenv("SQLITE_DB_PATH", "database.db")
+    DATABASE_URL = f"sqlite:///{sqlite_file_name}"
+    connect_args = {"check_same_thread": False}
+else:
+    connect_args = {}
+
+engine = create_engine(DATABASE_URL, connect_args=connect_args)
 
 def create_db_and_tables():
     SQLModel.metadata.create_all(engine)

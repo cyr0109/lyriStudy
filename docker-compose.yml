@@ -1,15 +1,27 @@
 services:
+  db:
+    image: postgres:15-alpine
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=lyristudy
+    ports:
+      - "5432:5432"
+
   backend:
     build: ./backend
     ports:
       - "8000:8000"
     volumes:
       - ./backend:/app  # Sync code for hot reload
-      - sqlite_data:/data # Persist database in a named volume mounted at /data
       - .env:/app/.env # Load env vars
+    depends_on:
+      - db
     environment:
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
-      - SQLITE_DB_PATH=/data/database.db
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/lyristudy
       - DAILY_ANALYSIS_LIMIT=${DAILY_ANALYSIS_LIMIT}
       - SECRET_KEY=${SECRET_KEY}
 
@@ -24,4 +36,4 @@ services:
       - backend
       
 volumes:
-  sqlite_data:
+  postgres_data:
