@@ -16,6 +16,9 @@ if (token) {
   axios.defaults.headers.common['x-auth-token'] = token;
 }
 
+// Set base URL from env if available (for separate deployment), otherwise default to relative path (for proxy)
+axios.defaults.baseURL = import.meta.env.VITE_API_URL || '';
+
 // Private Route Component
 const PrivateRoute = ({ children }) => {
   const token = localStorage.getItem('auth_token');

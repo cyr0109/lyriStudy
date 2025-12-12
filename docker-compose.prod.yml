@@ -1,0 +1,32 @@
+services:
+  backend:
+    build: ./backend
+    expose:
+      - "8000"
+    environment:
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - DATABASE_URL=${DATABASE_URL}
+      - DAILY_ANALYSIS_LIMIT=${DAILY_ANALYSIS_LIMIT}
+      - SECRET_KEY=${SECRET_KEY}
+
+  frontend-builder:
+    build: ./frontend
+    container_name: frontend_builder
+    volumes:
+      - frontend_dist:/app/dist
+    # Build the frontend and then exit. The volume will retain the files.
+    command: sh -c "npm run build && echo 'Build complete'"
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.prod.conf:/etc/nginx/conf.d/default.conf
+      - frontend_dist:/usr/share/nginx/html
+    depends_on:
+      - backend
+      - frontend-builder
+
+volumes:
+  frontend_dist:
