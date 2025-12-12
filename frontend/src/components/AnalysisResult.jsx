@@ -6,8 +6,6 @@ import axios from 'axios'
 import { Button } from './ui/button'
 import { toast } from 'sonner' // Import toast
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
-
 export function AnalysisResult({ result }) {
   const [expandedLines, setExpandedLines] = useState([])
   const [internalResult, setInternalResult] = useState(result);
@@ -29,7 +27,7 @@ export function AnalysisResult({ result }) {
 
   const handleToggleSave = async (vocabId) => {
     try {
-      const response = await axios.post(`${API_BASE_URL}/api/vocab/toggle_save/${vocabId}`);
+      const response = await axios.post(`/api/vocab/toggle_save/${vocabId}`);
       const updatedVocabCard = response.data;
 
       setInternalResult(prevResult => {
