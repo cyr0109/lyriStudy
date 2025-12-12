@@ -22,8 +22,9 @@ def analyze_lyrics_with_gemini(lyrics: str, language: str) -> Dict[str, Any]:
         # return _mock_response() 
         raise ValueError("GOOGLE_API_KEY environment variable not set")
 
-    # Using gemini-2.5-flash for speed and cost effectiveness (or pro if needed)
-    model = genai.GenerativeModel('gemini-2.5-flash')
+    # 'gemini-1.5-flash' was not found. Switching to 'gemini-2.5-flash-lite'
+    # which is available in the user's region/tier, though with limited RPD (20).
+    model = genai.GenerativeModel('gemini-2.5-flash-lite')
 
     prompt = f"""
     You are an expert language teacher specializing in {language}.

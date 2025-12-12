@@ -1,63 +1,26 @@
-import { useState, useEffect, useRef } from 'react'
-import axios from 'axios'
 import { Loader2, BookOpen, Globe, Music, User } from 'lucide-react'
 import { Button } from '../components/ui/button'
 import { Textarea } from '../components/ui/textarea'
 import { Input } from '../components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { AnalysisResult } from '../components/AnalysisResult'
-
+import { useAnalysis } from '../context/AnalysisContext'
 
 export function Home() {
-  const [lyrics, setLyrics] = useState('')
-  const [language, setLanguage] = useState('')
-  const [title, setTitle] = useState('')
-  const [artist, setArtist] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [result, setResult] = useState(null)
-  const [error, setError] = useState(null)
-  const [elapsedTime, setElapsedTime] = useState(0)
-  const timerRef = useRef(null)
+  const {
+    lyrics, setLyrics,
+    language, setLanguage,
+    title, setTitle,
+    artist, setArtist,
+    loading,
+    result,
+    error,
+    elapsedTime,
+    handleAnalyze
+  } = useAnalysis();
 
   const MAX_CHARS = 2000;
   const isOverLimit = lyrics.length > MAX_CHARS;
-
-  useEffect(() => {
-    if (loading) {
-      const startTime = Date.now();
-      timerRef.current = setInterval(() => {
-        setElapsedTime(Math.floor((Date.now() - startTime) / 1000));
-      }, 1000);
-    } else {
-      clearInterval(timerRef.current);
-      setElapsedTime(0);
-    }
-    return () => clearInterval(timerRef.current);
-  }, [loading]);
-
-  const handleAnalyze = async () => {
-    if (!lyrics.trim() || isOverLimit) return
-
-    setLoading(true)
-    setError(null)
-    setResult(null)
-
-    try {
-      const response = await axios.post(`/api/analyze`, {
-        lyrics,
-        language,
-        title,
-        artist
-      })
-      setResult(response.data)
-    } catch (err) {
-      console.error(err)
-      const msg = err.response?.data?.detail || "Failed to analyze lyrics. Please try again.";
-      setError(msg)
-    } finally {
-      setLoading(false)
-    }
-  }
 
   return (
     <div className="max-w-5xl mx-auto space-y-8">
