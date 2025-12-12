@@ -21,8 +21,9 @@ def run_migration():
         try:
             # Check if column exists is hard in raw SQL cross-db, so we just try to add it.
             # If it fails, we assume it exists.
+            # Quote "user" because it is a reserved keyword in Postgres
             print("Attempting to add 'avatar' column to 'user' table...")
-            conn.execute(text("ALTER TABLE user ADD COLUMN avatar TEXT;"))
+            conn.execute(text('ALTER TABLE "user" ADD COLUMN avatar TEXT;'))
             conn.commit()
             print("Successfully added 'avatar' column.")
         except Exception as e:
